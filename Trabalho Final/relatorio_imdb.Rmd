@@ -1,0 +1,350 @@
+---
+title: "Relatório R para Ciência de Dados II"
+author: "Géssica de Freitas"
+output: github_document
+  #prettydoc::html_pretty:
+     #theme: tactile
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+```
+
+```{r, inicio, include=FALSE}
+imdb <- basesCursoR::pegar_base("imdb_completa")
+imdb_pessoas <- basesCursoR::pegar_base("imdb_pessoas")
+imdb_avaliacoes <- basesCursoR::pegar_base("imdb_avaliacoes")
+
+```
+
+```{r, libraries, message=FALSE, warning=FALSE, paged.print=TRUE}
+library(foreign)
+library(readr)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(scales)
+library(gridExtra)
+library(knitr)
+library(lubridate)
+library(stringr)
+
+
+```
+
+Este relatório apresenta algumas análises feitas a partir da base de dados do IMDB da Curso R. A IMDb, também conhecida como Internet Movie Database, é uma base de dados online de informação sobre cinema, TV, música e games, hoje pertencente à Amazon. Ela disponibiliza aos usuários uma série de serviços, incluindo horários de exibição de filmes nos cinemas, trailers, críticas e avaliações de usuários, está última que é popularmente utilizada como base para avaliação da qualidade de filmes.
+
+## Algumas Curiosidades
+
+#### 1) Geralmente em que mês do ano mais filmes são lançados?
+
+```{r mes, message=FALSE, warning=FALSE, paged.print=TRUE,  fig.align = "center", echo=FALSE, fig.height=3, fig.width=9}
+
+
+imdb[['data_lancamento']] <- as.POSIXct(imdb[['data_lancamento']],
+                                   format = "%Y-%m-%d")
+
+tab_mes <- imdb %>%
+  mutate(
+    Mes = month(data_lancamento, label = TRUE, abbr = FALSE), 
+  ) %>%
+  drop_na(Mes)%>%
+  group_by(Mes) %>%
+  summarise(
+     NºFilmes = n(), 
+  ) %>%
+  arrange(desc(NºFilmes)) %>%
+  head()
+
+ tab_mes %>%
+  knitr::kable(col.names = c("Mês", "Nº de Filmes")) 
+
+
+
+```
+
+A partir da tabela acima, que mostra os meses em que mais filmes foram lançados, podemos visualizar que o mês do ano com maior número de filmes foi outubro, com 8706 novos filmes sendo lançados neste mês ao longo dos anos.
+
+#### 2) E o dia do ano em que mais filmes são lançados?
+
+```{r dia, message=FALSE, warning=FALSE, paged.print=TRUE,  fig.align = "center", echo=FALSE, fig.height=3, fig.width=9}
+
+
+
+tab_dia <- imdb %>%
+  mutate(
+    Dia = day(data_lancamento), 
+  ) %>%
+  drop_na(Dia)%>%
+  group_by(Dia) %>%
+  summarise(
+     NºFilmes = n(), 
+  ) %>%
+  arrange(desc(NºFilmes)) %>%
+  head()
+
+ tab_dia %>%
+  knitr::kable(col.names = c("Dia", "Nº de Filmes"))
+
+ 
+
+```
+
+A partir da tabela acima, que mostra os dias em que mais filmes foram lançados, podemos visualizar que o dia do ano com maior número de filmes foi o dia 1º, com 7226 novos filmes sendo lançados neste dia ao longo dos meses e anos da base. Ou seja, o dia favorito para lançar filmes é o primeiro do mês!
+
+#### 3) Quais países lançam mais filmes?
+
+```{r pais, message=FALSE, warning=FALSE, paged.print=TRUE,  fig.align = "center", echo=FALSE, fig.height=3, fig.width=9}
+
+
+tab_pais <- imdb %>%
+  select(titulo, pais) %>%
+  mutate(
+    Pais = str_split(pais, "\\,")) %>%
+  unnest(Pais) %>%
+  group_by(Pais) %>%
+  summarise(
+     NºFilmes = n(), 
+  ) %>%
+  arrange(desc(NºFilmes)) %>%
+  top_n(5)
+      
+  
+  tab_pais %>%
+  knitr::kable(col.names = c("País", "Nº de Filmes"))
+
+
+
+```
+
+A partir da tabela acima podemos visualizar que os 5 países com mais filmes na base são, respectivamente, Estados Unidos, Índia, Reino Unido, França e Itália.
+
+#### 4) O orçamento ou receita dos filmes aparecem, nesta base, em 79 moedas diferentes. São elas:
+
+```{r, moedas, message=FALSE, warning=FALSE, paged.print=TRUE,  fig.align = "center", echo=FALSE, fig.height=3, fig.width=9}
+
+tab_moeda <-imdb %>%
+  mutate(
+    moeda = str_extract(orcamento, "^[A-Za-z !#%&\\$]+")) %>%
+  select(titulo, moeda)%>%
+  drop_na(moeda) %>%
+  distinct(moeda) 
+
+tab_moeda %>%
+  knitr::kable(col.names = c("Moeda"))
+
+
+```
+
+#### 5) Dentre os filmes com orçamentos e receitas em dólar, qual gênero mais lucra?
+
+```{r, dolar, message=FALSE, warning=FALSE, paged.print=TRUE,  fig.align = "center", echo=FALSE, fig.height=3, fig.width=9}
+
+tab_dolar <- imdb %>%
+  mutate(
+    moeda = str_extract(orcamento, "^[A-Za-z !#%&\\$]+")) %>%
+  drop_na(moeda) %>%
+  filter(moeda == "$ ") %>%
+  mutate(
+    orcamento = str_extract(orcamento, "[0-9]+"), 
+    receita = str_extract(receita, "[0-9]+")
+    ) 
+  
+tab_dolar$orcamento <- as.numeric(as.character(tab_dolar$orcamento))
+tab_dolar$receita<- as.numeric(as.character(tab_dolar$receita))
+
+
+ tab_dolar_lucro <-  tab_dolar %>%
+    mutate(lucro = receita - orcamento) %>%
+   drop_na(lucro) %>%
+   mutate(
+     generos = str_split(genero, "\\,")) %>%
+  unnest(generos) %>%
+   mutate(
+     generos = str_squish(generos))%>%
+    group_by(generos) %>% 
+     summarise(
+     LucroMedio = mean(lucro)
+   ) %>%
+    arrange(desc(LucroMedio)) %>%
+   head()
+
+
+ tab_dolar_lucro  %>%
+  knitr::kable(col.names = c("Gêneros", "Lucro Médio"))
+   
+```
+
+Quando consideramos apenas os filmes cujos orçamentos e receitas são apresentados em dólar (\$) na base, podemos vizualizar, a partir da tabela acima que apresenta os gêneros com maior lucro, que o gênero Animação é o que mais lucra dentre todos, lucrando em média 132.512.647 dólares.
+
+#### 6) Dentre os filmes com orçamentos e receitas em dólar, qual gênero tem maior nota no IMDB?
+
+```{r, dolarnota, message=FALSE, warning=FALSE, paged.print=TRUE,  fig.align = "center", echo=FALSE, fig.height=3, fig.width=9}
+
+
+ tab_dolar_nota <-  tab_dolar %>%
+    drop_na(nota_imdb) %>%
+   mutate(
+     generos = str_split(genero, "\\,")) %>%
+  unnest(generos) %>%
+   mutate(
+     generos = str_squish(generos))%>%
+    group_by(generos) %>% 
+     summarise(
+     NotaMedia = mean(nota_imdb)
+   ) %>%
+  arrange(desc(NotaMedia)) %>%
+   head()
+
+
+ tab_dolar_nota  %>%
+  knitr::kable(col.names = c("Gêneros", "Nota Média"))
+   
+```
+
+Quando consideramos apenas os filmes cujos orçamentos e receitas são apresentados em dólar (\$) na base, podemos vizualizar, a partir da tabela acima que apresenta os gêneros com maior nota média no IMDb, que o gênero Film-Noir é o que tem maior nota dentre todos, com média igual a 7.85 aproximadamente.
+
+## E o meu filme favorito? Como ele aparece no IMDb?
+
+É muito dificil escolher um filme favorito, mas para os propósitos desta análise, escolherem um dos meus favoritos, ele se chama "Inception", ou, em português, "A Origem". 
+
+ ![](C:/Users/gessi/Desktop/Unicamp/Cursos/Curso-R/R para Ciência de Dados II/Trabalho Final/ORIGEM.jpg) 
+
+**Sinópse:** Dom Cobb é um ladrão com a rara habilidade de roubar segredos do inconsciente, obtidos durante o estado de sono. Impedido de retornar para sua família, ele recebe a oportunidade de se redimir ao realizar uma tarefa aparentemente impossível: plantar uma ideia na mente do herdeiro de um império. Para realizar o crime perfeito, ele conta com a ajuda do parceiro Arthur, o discreto Eames e a arquiteta de sonhos Ariadne. Juntos, eles correm para que o inimigo não antecipe seus passos.
+
+#### Algumas informações sobre ele:
+
+```{r, inception, message=FALSE, warning=FALSE, paged.print=TRUE,  fig.align = "center", echo=FALSE, fig.height=3, fig.width=9}
+
+ tab_dolar_solucro <-  tab_dolar %>%
+    mutate(lucro = receita - orcamento) %>%
+   drop_na(lucro) 
+
+ inception <-  tab_dolar_solucro %>%
+  filter(titulo == "Inception") %>%
+  select(titulo, ano, direcao, nota_imdb, lucro)
+
+inception  %>%
+  knitr::kable(col.names = c("Título do Filme", "Ano de lançamento", "Nome do diretor", "Nota IMDb", "Lucro"))
+   
+```
+
+Podemos ver que o filme foi muito bem avaliado no imdb, com uma nota bem acima da média do gênero melhor avaliado, que era de 7.85 aproximadamente, e lucrou mais de 700 milhões de dólares!
+
+#### E quem é Christopher Nolan?
+
+```{r, nolan, message=FALSE, warning=FALSE, paged.print=TRUE,  fig.align = "center", echo=FALSE, fig.height=3, fig.width=9}
+
+imdb_pessoas[['data_nascimento']] <- as.POSIXct(imdb_pessoas[['data_nascimento']],
+                                   format = "%Y-%m-%d")
+
+today <- as.Date(Sys.Date(), format='%Y-%m-%d')
+
+Nolan <- imdb_pessoas %>%
+filter(nome == "Christopher Nolan") %>%
+  select(nome_nascimento, data_nascimento, local_nascimento) %>%
+  mutate(
+    Idade = year(today)-year(data_nascimento))
+
+
+Nolan %>%
+  knitr::kable(col.names = c("Nome de nascimento", "Data de nascimento", "Local de nascimento", "Idade"))
+
+
+
+```
+
+Nolan nasceu em Londres, na Inglaterra. Ele tem, hoje, 51 anos, e dentre os filmes da base cujos orçamentos e receitas se apresentam em dólares, já dirigiu 11 filmes. São eles:
+
+```{r, nolanfilmes, message=FALSE, warning=FALSE, paged.print=TRUE,  fig.align = "center", echo=FALSE, fig.height=3, fig.width=9}
+
+ filmesnolan <- tab_dolar_solucro %>%
+   filter(direcao == "Christopher Nolan") %>%
+   select(titulo, ano, lucro, nota_imdb)
+
+ filmesnolan %>%
+  knitr::kable(col.names = c("Título do Filme", "Ano de lançamento", "Lucro", "Nota IMDB"))
+
+
+
+```
+
+O lucro médio dos filmes digiridos por Nolan é de 323.706.161 dólares, e a média das notas do IMDB desses filmes é aproximadamente 8.21. O cara é bom!
+
+#### Mas voltando para o Inception... Eu gosto dele, mas e o IMDB?
+
+Considerando todos os filmes da base do IMDB, Inception está na 107ª posição no ranking de notas, de um total de 85,855 filmes. Considerando apenas os filmes com orçamentos e receitas em dolar, Inception está na 14ª posição, de um total de 9,025 filmes. Não é pouca coisa não em! Ainda, quando ordenamos esses 9,025 filmes a partir de seus lucros, vemos que Inception é o 72º filme que mais lucrou.
+
+```{r, lancamento,  warning=FALSE, include=FALSE, paged.print=TRUE, message=FALSE}
+
+
+DIAINCEPTION<- tab_dolar_solucro %>%
+  filter(titulo == "Inception") %>%
+  select(titulo, data_lancamento)
+
+DIAINCEPTION[['data_lancamento']] <- as.POSIXct(DIAINCEPTION[['data_lancamento']],
+                                   format = "%Y-%m-%d")
+
+DIAINCEPTION$Dia <- weekdays(as.Date(DIAINCEPTION$data_lancamento))
+meunasc <- "1998-11-13"
+nasc <- as.Date(meunasc, format = "%Y-%m-%d")
+
+year(DIAINCEPTION$data_lancamento) - year(nasc)
+   
+```
+
+Inception foi lançado no dia 21 de setembro de 2010, uma sexta-feira, eu tinha apenas 12 anos!
+20 filmes foram lançados nesse mesmo dia exatamente, contando com Inception. São eles:
+
+```{r echo=FALSE, fig.height=3, fig.width=9, message=FALSE, warning=FALSE, mesmodia, fig.align="center", paged.print=TRUE}
+
+DIAINCEPTION<- tab_dolar_solucro %>%
+  filter(titulo == "Inception") %>%
+  select(data_lancamento)
+
+mesmodia <- imdb %>%
+  filter(data_lancamento == DIAINCEPTION) %>%
+  select(titulo, data_lancamento, direcao, nota_imdb )
+
+mesmodia %>%
+  knitr::kable(col.names = c("Título do Filme", "Data de lançamento", "Diretor(a)", "Nota Imdb"))
+   
+```
+
+Apesar de lançados no mesmo dia, podemos ver que nenhum dos filmes se igua-la ao Inception em sua avaliação. O filme que chega mais próximo é o "Un soffio per la felicità", que possui nota 7. 
+Mas será que todo mundo gosta mesmo de Inception, ou algumas faixas de idade gostam mais do que outras? Vamos ver. 
+
+
+```{r echo=FALSE, fig.height=3, fig.width=9, message=FALSE, warning=FALSE, avaliacao, fig.align="center", paged.print=TRUE}
+
+IDINCEPTION<- imdb %>%
+  filter(titulo == "Inception") %>%
+  select(id_filme)
+
+avaliacoesinception <- imdb_avaliacoes %>%
+  filter(id_filme == "tt1375666") %>%
+  rename(
+   "0 a 18 anos" =  "nota_media_idade_0_18", 
+   "18 a 30 anos" = "nota_media_idade_18_30", 
+   "30 a 45 anos" = "nota_media_idade_30_45", 
+   "45 anos ou mais" = "nota_media_idade_45_mais"
+  )
+
+
+nova <- pivot_longer(avaliacoesinception, cols= c("0 a 18 anos", "18 a 30 anos", "30 a 45 anos", "45 anos ou mais"), names_to = "Fxidade", values_to = "nota")
+
+nova %>%
+  ggplot(aes(x= nota, y = Fxidade)) +
+  geom_col(fill= "#800000")+
+  scale_x_continuous(limits = c(0,10))+
+  theme_minimal()+
+  labs(y = "Faixa de Idade", x = "Avaliação")
+
+
+
+   
+```
+
+A partir do gráfico acima é possível visualizar que apesar de o filme ser um pouco menos popular entre aqueles com 45 anos ou mais, de forma geral todas as faixas etárias avaliam o filme muito bem, sempre acima de 7.5. O filme é um sucesso mesmo! 
+
+**E você, qual seu filme preferido?**
