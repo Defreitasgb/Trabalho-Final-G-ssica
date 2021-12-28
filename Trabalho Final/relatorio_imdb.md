@@ -181,7 +181,7 @@ a 7.85 aproximadamente.
 ## E o meu filme favorito? Como ele aparece no IMDb?
 
 É muito dificil escolher um filme favorito, mas para os propósitos desta
-análise, escolherem um dos meus favoritos, ele se chama “Inception”, ou
+análise, escolherem um dos meus favoritos, ele se chama “Inception”, ou,
 em português, “A Origem”.
 
 ![](C:/Users/gessi/Desktop/Unicamp/Cursos/Curso-R/R%20para%20Ciência%20de%20Dados%20II/Trabalho%20Final/ORIGEM.jpg)
