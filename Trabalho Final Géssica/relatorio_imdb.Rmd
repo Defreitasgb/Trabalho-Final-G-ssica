@@ -31,7 +31,7 @@ library(stringr)
 
 ```
 
-Este relatório apresenta algumas análises feitas a partir da base de dados do IMDB da Curso R. A IMDb, também conhecida como Internet Movie Database, é uma base de dados online de informação sobre cinema, TV, música e games, hoje pertencente à Amazon. Ela disponibiliza aos usuários uma série de serviços, incluindo horários de exibição de filmes nos cinemas, trailers, críticas e avaliações de usuários, está última que é popularmente utilizada como base para avaliação da qualidade de filmes.
+Este relatório apresenta algumas análises feitas a partir da base de dados do IMDb da Curso R. A IMDb, também conhecida como Internet Movie Database, é uma base de dados online de informação sobre cinema, TV, música e games, hoje pertencente à Amazon. Ela disponibiliza aos usuários uma série de serviços, incluindo horários de exibição de filmes nos cinemas, trailers, críticas e avaliações de usuários, este último que é popularmente utilizado como base para avaliação da qualidade de filmes.
 
 ## Algumas Curiosidades
 
