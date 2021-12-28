@@ -2,8 +2,7 @@
 title: "Relatório R para Ciência de Dados II"
 author: "Géssica de Freitas"
 output: github_document
-  #prettydoc::html_pretty:
-     #theme: tactile
+  
 ---
 
 ```{r setup, include=FALSE}
@@ -31,6 +30,8 @@ library(stringr)
 library(usethis)
 
 use_git()
+use_github()
+usethis::use_git_remote("origin", url = NULL, overwrite = TRUE)
 
 ```
 
