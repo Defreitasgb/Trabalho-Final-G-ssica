@@ -1,9 +1,7 @@
 ---
 title: "Relatório Base IMDB - R para Ciência de Dados II"
 author: "Géssica de Freitas"
-output: 
- prettydoc::html_pretty:
-     theme: tactile
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
