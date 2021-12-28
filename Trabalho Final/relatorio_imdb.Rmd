@@ -28,7 +28,9 @@ library(gridExtra)
 library(knitr)
 library(lubridate)
 library(stringr)
+library(usethis)
 
+use_git()
 
 ```
 
